@@ -1,7 +1,8 @@
 # FindTheRoots
 
 <p align="center">
-  Desktop visualizer for core Numerical Methods
+  <b>Desktop visualizer for core Numerical Methods</b><br/>
+  Newton-Raphson • Regula Falsi • Gauss-Jacobi • Gauss-Seidel
 </p>
 
 <p align="center">
@@ -19,18 +20,19 @@
   <img src="https://hits.seeyoufarm.com/api/count/incr/badge.svg?url=https%3A%2F%2Fgithub.com%2FDevInfinix%2FFindTheRoots&count_bg=%233D78C8&title_bg=%230F172A&icon=github.svg&icon_color=%23FFFFFF&title=views&edge_flat=false" alt="Repo Views" />
 </p>
 
-## What It Solves
-
-- Newton-Raphson
-- Regula Falsi
-- Gauss-Jacobi
-- Gauss-Seidel
-
-Built with `Python`, `CustomTkinter`, `NumPy`, and `SymPy`.
-
-## Demo
+## Preview
 
 ![FindTheRoots Demo](assets/FindTheRoots%20%5BDemo%5D.gif)
+
+## Features
+
+- Clean dark UI with guided method selection
+- Per-iteration table output
+- Random input generator (`🎲`)
+- Confetti success effect
+- Root finding + linear solver support
+
+Built with `Python`, `CustomTkinter`, `NumPy`, and `SymPy`.
 
 ## Quick Start
 
@@ -50,6 +52,8 @@ pyinstaller --onefile --windowed main.py
 ## Repo Analytics
 
 ![Activity Graph](https://github-readme-activity-graph.vercel.app/graph?username=DevInfinix&theme=github-compact&hide_border=true)
+
+![Streak Stats](https://streak-stats.demolab.com?user=DevInfinix&theme=dark&hide_border=true)
 
 <p align="center">
   <img src="https://github-readme-stats.vercel.app/api?username=DevInfinix&show_icons=true&hide_border=true&theme=github_dark" alt="GitHub Stats" />
