@@ -1,5 +1,3 @@
-"""UI package exports."""
-
-from .app import App
+﻿from .app import App
 
 __all__ = ["App"]

@@ -1,68 +1,17 @@
-"""Strategy factory for solver instantiation."""
-
-from __future__ import annotations
-
-from dataclasses import dataclass
-from typing import Any
-
-import numpy as np
-
-from numerical_methods import GaussJacobi, GaussSeidel, NewtonRaphson, RegulaFalsi
+﻿from numerical_methods import GaussJacobi, GaussSeidel, NewtonRaphson, RegulaFalsi
 
 
-@dataclass(slots=True)
-class SolveRequest:
-    """Normalized user input payload for solver construction."""
+def create_solver(method_key, data):
+    if method_key == "newton_raphson":
+        return NewtonRaphson(data["function_expression"], data["initial_guess"], data["iterations"], data["precision"])
 
-    method_key: str
-    data: dict[str, Any]
+    if method_key == "regula_falsi":
+        return RegulaFalsi(data["function_expression"], data["lower_bound"], data["upper_bound"], data["iterations"], data["precision"])
 
+    if method_key == "gauss_jacobi":
+        return GaussJacobi(data["matrix"], data["constants"], data["iterations"], data["precision"])
 
-class MethodStrategyFactory:
-    """Creates solver instances based on selected strategy key."""
+    if method_key == "gauss_seidel":
+        return GaussSeidel(data["matrix"], data["constants"], data["iterations"], data["precision"])
 
-    @staticmethod
-    def create_solver(request: SolveRequest):
-        data = request.data
-        method = request.method_key
-
-        if method == "newton_raphson":
-            return NewtonRaphson(
-                function_expression=data["function_expression"],
-                initial_guess=data["initial_guess"],
-                max_iterations=data["max_iterations"],
-                tolerance=data["tolerance"],
-                precision=data["precision"],
-            )
-
-        if method == "regula_falsi":
-            return RegulaFalsi(
-                function_expression=data["function_expression"],
-                lower_bound=data["lower_bound"],
-                upper_bound=data["upper_bound"],
-                max_iterations=data["max_iterations"],
-                tolerance=data["tolerance"],
-                precision=data["precision"],
-            )
-
-        if method == "gauss_jacobi":
-            return GaussJacobi(
-                matrix=np.array(data["matrix"], dtype=float),
-                constants=np.array(data["constants"], dtype=float),
-                initial_guess=np.array(data["initial_guess"], dtype=float),
-                max_iterations=data["max_iterations"],
-                tolerance=data["tolerance"],
-                precision=data["precision"],
-            )
-
-        if method == "gauss_seidel":
-            return GaussSeidel(
-                matrix=np.array(data["matrix"], dtype=float),
-                constants=np.array(data["constants"], dtype=float),
-                initial_guess=np.array(data["initial_guess"], dtype=float),
-                max_iterations=data["max_iterations"],
-                tolerance=data["tolerance"],
-                precision=data["precision"],
-            )
-
-        raise ValueError(f"Unsupported method key: {method}")
+    raise ValueError("Unsupported method.")
