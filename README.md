@@ -1,7 +1,8 @@
-# FindTheRoots
+<h1 align="center">FindTheRoots</h1>
 
 <p align="center">
-  Desktop visualizer for core Numerical Methods
+  <b>Desktop visualizer for core Numerical Methods</b><br/>
+  Newton-Raphson • Regula Falsi • Gauss-Jacobi • Gauss-Seidel
 </p>
 
 <p align="center">
@@ -16,25 +17,26 @@
   <img src="https://img.shields.io/github/repo-size/DevInfinix/FindTheRoots?style=flat-square" alt="Repo Size" />
   <img src="https://img.shields.io/github/languages/top/DevInfinix/FindTheRoots?style=flat-square" alt="Top Language" />
   <img src="https://img.shields.io/github/license/DevInfinix/FindTheRoots?style=flat-square" alt="License" />
-  <img src="https://hits.seeyoufarm.com/api/count/incr/badge.svg?url=https%3A%2F%2Fgithub.com%2FDevInfinix%2FFindTheRoots&count_bg=%233D78C8&title_bg=%230F172A&icon=github.svg&icon_color=%23FFFFFF&title=views&edge_flat=false" alt="Repo Views" />
 </p>
 
-## What It Solves
+---
 
-- Newton-Raphson
-- Regula Falsi
-- Gauss-Jacobi
-- Gauss-Seidel
-
-Built with `Python`, `CustomTkinter`, `NumPy`, and `SymPy`.
-
-## Demo
+## Preview
 
 ![FindTheRoots Demo](assets/FindTheRoots%20%5BDemo%5D.gif)
 
+## Features
+
+- Clean dark UI with guided method selection
+- Per-iteration table output
+- Random input generator
+- Linear + Transcendental function support
+
+Built with `Python`, `CustomTkinter`, `NumPy`, and `SymPy`.
+
 ## Quick Start
 
-```bash
+```shell
 python -m venv .venv
 .venv\Scripts\activate
 pip install -r requirements.txt
@@ -43,7 +45,7 @@ python main.py
 
 ## Build EXE
 
-```bash
+```shell
 pyinstaller --onefile --windowed main.py
 ```
 
@@ -51,10 +53,8 @@ pyinstaller --onefile --windowed main.py
 
 ![Activity Graph](https://github-readme-activity-graph.vercel.app/graph?username=DevInfinix&theme=github-compact&hide_border=true)
 
-<p align="center">
-  <img src="https://github-readme-stats.vercel.app/api?username=DevInfinix&show_icons=true&hide_border=true&theme=github_dark" alt="GitHub Stats" />
-  <img src="https://github-readme-stats.vercel.app/api/top-langs/?username=DevInfinix&layout=compact&hide_border=true&theme=github_dark" alt="Top Languages" />
-</p>
+> AI Usage Disclaimer: 
+  This project was developed without the assistance of AI tools, however some polishing of code and documentation may have been done with the help of AI.
 
 ## License
 
