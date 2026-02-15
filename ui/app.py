@@ -29,6 +29,7 @@ class App(ctk.CTk):
 
         self.selected_method: str | None = None
         self.last_result = None
+        self.last_request = None
 
         self.frames: dict[str, ctk.CTkFrame] = {}
         for frame_cls in (LandingFrame, SelectionFrame, InputFrame, ResultFrame):

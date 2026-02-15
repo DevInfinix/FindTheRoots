@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Any
 
 import customtkinter as ctk
 
 from .base import AppFrame
+from .strategies import MethodStrategyFactory, SolveRequest
 from .theme import FONTS, PALETTE
 
 
@@ -277,10 +279,272 @@ class SelectionFrame(AppFrame):
 
 
 class InputFrame(AppFrame):
-    """Placeholder for dynamic input forms."""
+    """Dynamic method-specific input form screen."""
 
     def __init__(self, parent: ctk.CTkFrame, controller: ctk.CTk) -> None:
         super().__init__(parent, controller, fg_color=PALETTE["bg"])
+        self.method_names = {
+            "newton_raphson": "Newton-Raphson",
+            "regula_falsi": "Regula Falsi",
+            "gauss_jacobi": "Gauss-Jacobi",
+            "gauss_seidel": "Gauss-Seidel",
+        }
+
+        self.matrix_size = ctk.StringVar(value="3")
+        self.function_entry: ctk.CTkEntry | None = None
+        self.initial_guess_entry: ctk.CTkEntry | None = None
+        self.lower_bound_entry: ctk.CTkEntry | None = None
+        self.upper_bound_entry: ctk.CTkEntry | None = None
+        self.iterations_entry: ctk.CTkEntry | None = None
+        self.precision_entry: ctk.CTkEntry | None = None
+        self.tolerance_entry: ctk.CTkEntry | None = None
+        self.matrix_entries: list[list[ctk.CTkEntry]] = []
+        self.constants_entries: list[ctk.CTkEntry] = []
+        self.initial_vector_entries: list[ctk.CTkEntry] = []
+
+        self.grid_rowconfigure(0, weight=1)
+        self.grid_columnconfigure(0, weight=1)
+
+        self.container = ctk.CTkFrame(
+            self,
+            fg_color=PALETTE["surface"],
+            corner_radius=16,
+            border_width=1,
+            border_color="#26364C",
+        )
+        self.container.grid(row=0, column=0, padx=38, pady=38, sticky="nsew")
+        self.container.grid_rowconfigure(1, weight=1)
+        self.container.grid_columnconfigure(0, weight=1)
+
+        self.title_label = ctk.CTkLabel(
+            self.container,
+            text="Configure Method",
+            font=FONTS["title"],
+            text_color=PALETTE["text_primary"],
+        )
+        self.title_label.grid(row=0, column=0, pady=(20, 6))
+
+        self.form_scroll = ctk.CTkScrollableFrame(self.container, fg_color=PALETTE["card"], corner_radius=14)
+        self.form_scroll.grid(row=1, column=0, sticky="nsew", padx=20, pady=(6, 12))
+        self.form_scroll.grid_columnconfigure(0, weight=1)
+
+        self.error_label = ctk.CTkLabel(
+            self.container,
+            text="",
+            font=FONTS["body"],
+            text_color=PALETTE["danger"],
+        )
+        self.error_label.grid(row=2, column=0, pady=(0, 6))
+
+        footer = ctk.CTkFrame(self.container, fg_color="transparent")
+        footer.grid(row=3, column=0, pady=(0, 20))
+        ctk.CTkButton(
+            footer,
+            text="Back",
+            width=110,
+            fg_color="#29364A",
+            hover_color="#374A66",
+            command=lambda: controller.show_frame("SelectionFrame"),
+        ).pack(side="left", padx=8)
+        ctk.CTkButton(
+            footer,
+            text="Solve",
+            width=150,
+            fg_color=PALETTE["accent"],
+            hover_color=PALETTE["accent_hover"],
+            text_color="#04121E",
+            command=self._solve_current_method,
+        ).pack(side="left", padx=8)
+
+    def on_show(self) -> None:
+        method_key = self.controller.selected_method or "newton_raphson"
+        method_name = self.method_names.get(method_key, "Method")
+        self.title_label.configure(text=f"Configure {method_name}")
+        self.error_label.configure(text="")
+        self._render_method_form(method_key)
+
+    def _render_method_form(self, method_key: str) -> None:
+        for child in self.form_scroll.winfo_children():
+            child.destroy()
+
+        self.function_entry = None
+        self.initial_guess_entry = None
+        self.lower_bound_entry = None
+        self.upper_bound_entry = None
+        self.matrix_entries = []
+        self.constants_entries = []
+        self.initial_vector_entries = []
+
+        row = 0
+        if method_key in {"newton_raphson", "regula_falsi"}:
+            self.function_entry = self._add_entry_row(row, "f(x)", "x**3 - x - 2")
+            row += 1
+
+            if method_key == "newton_raphson":
+                self.initial_guess_entry = self._add_entry_row(row, "Initial Guess", "1.5")
+            else:
+                self.lower_bound_entry = self._add_entry_row(row, "Lower Bound (a)", "1")
+                row += 1
+                self.upper_bound_entry = self._add_entry_row(row, "Upper Bound (b)", "2")
+            row += 1
+        else:
+            self._add_matrix_size_selector(row)
+            row += 1
+            self._build_matrix_grid(size=int(self.matrix_size.get()), row=row)
+            row += 1
+
+        self.iterations_entry = self._add_entry_row(row, "Max Iterations", "50")
+        row += 1
+        self.precision_entry = self._add_entry_row(row, "Decimal Precision", "6")
+        row += 1
+        self.tolerance_entry = self._add_entry_row(row, "Tolerance", "1e-8")
+
+    def _add_entry_row(self, row: int, label: str, placeholder: str) -> ctk.CTkEntry:
+        wrapper = ctk.CTkFrame(self.form_scroll, fg_color="transparent")
+        wrapper.grid(row=row, column=0, sticky="ew", padx=16, pady=8)
+        wrapper.grid_columnconfigure(1, weight=1)
+
+        ctk.CTkLabel(wrapper, text=label, width=180, anchor="w", font=FONTS["body"]).grid(row=0, column=0, padx=(0, 8))
+        entry = ctk.CTkEntry(wrapper, placeholder_text=placeholder, fg_color="#111824", border_color="#32445E")
+        entry.grid(row=0, column=1, sticky="ew")
+        return entry
+
+    def _add_matrix_size_selector(self, row: int) -> None:
+        wrapper = ctk.CTkFrame(self.form_scroll, fg_color="transparent")
+        wrapper.grid(row=row, column=0, sticky="ew", padx=16, pady=8)
+        wrapper.grid_columnconfigure(1, weight=1)
+
+        ctk.CTkLabel(wrapper, text="Matrix Size", width=180, anchor="w", font=FONTS["body"]).grid(row=0, column=0, padx=(0, 8))
+        selector = ctk.CTkOptionMenu(
+            wrapper,
+            variable=self.matrix_size,
+            values=["2", "3", "4", "5", "6"],
+            fg_color="#2A3A50",
+            button_color="#324760",
+            button_hover_color="#3E5676",
+            command=lambda value: self._build_matrix_grid(size=int(value), row=row + 1),
+        )
+        selector.grid(row=0, column=1, sticky="w")
+
+    def _build_matrix_grid(self, size: int, row: int) -> None:
+        current = self.form_scroll.grid_slaves(row=row, column=0)
+        for widget in current:
+            widget.destroy()
+
+        panel = ctk.CTkFrame(self.form_scroll, fg_color="#111824", corner_radius=12)
+        panel.grid(row=row, column=0, sticky="ew", padx=16, pady=8)
+        panel.grid_columnconfigure(0, weight=1)
+
+        ctk.CTkLabel(
+            panel,
+            text="Enter A matrix, b constants, and initial guess vector x(0)",
+            font=FONTS["body"],
+            text_color=PALETTE["text_secondary"],
+        ).grid(row=0, column=0, sticky="w", padx=14, pady=(12, 8))
+
+        grid_frame = ctk.CTkFrame(panel, fg_color="transparent")
+        grid_frame.grid(row=1, column=0, padx=14, pady=(0, 12), sticky="w")
+
+        self.matrix_entries = []
+        self.constants_entries = []
+        self.initial_vector_entries = []
+
+        for i in range(size):
+            matrix_row_entries: list[ctk.CTkEntry] = []
+            for j in range(size):
+                entry = ctk.CTkEntry(grid_frame, width=68, placeholder_text="0")
+                entry.grid(row=i, column=j, padx=4, pady=4)
+                entry.insert(0, "0")
+                matrix_row_entries.append(entry)
+            ctk.CTkLabel(grid_frame, text="|", font=FONTS["heading"]).grid(row=i, column=size, padx=8)
+            b_entry = ctk.CTkEntry(grid_frame, width=68, placeholder_text="0")
+            b_entry.grid(row=i, column=size + 1, padx=4, pady=4)
+            b_entry.insert(0, "0")
+            self.constants_entries.append(b_entry)
+
+            ctk.CTkLabel(grid_frame, text="x0", font=FONTS["body"]).grid(row=i, column=size + 2, padx=(12, 4))
+            x0_entry = ctk.CTkEntry(grid_frame, width=68, placeholder_text="0")
+            x0_entry.grid(row=i, column=size + 3, padx=4, pady=4)
+            x0_entry.insert(0, "0")
+            self.initial_vector_entries.append(x0_entry)
+
+            self.matrix_entries.append(matrix_row_entries)
+
+    def _parse_float(self, entry: ctk.CTkEntry, field_name: str) -> float:
+        value = entry.get().strip()
+        if not value:
+            raise ValueError(f"{field_name} is required.")
+        return float(value)
+
+    def _parse_int(self, entry: ctk.CTkEntry, field_name: str, minimum: int = 1) -> int:
+        value = entry.get().strip()
+        if not value:
+            raise ValueError(f"{field_name} is required.")
+        parsed = int(value)
+        if parsed < minimum:
+            raise ValueError(f"{field_name} must be >= {minimum}.")
+        return parsed
+
+    def _collect_payload(self, method_key: str) -> dict[str, Any]:
+        max_iterations = self._parse_int(self.iterations_entry, "Max Iterations", minimum=1)
+        precision = self._parse_int(self.precision_entry, "Decimal Precision", minimum=0)
+        tolerance = self._parse_float(self.tolerance_entry, "Tolerance")
+        if tolerance <= 0:
+            raise ValueError("Tolerance must be positive.")
+
+        payload: dict[str, Any] = {
+            "max_iterations": max_iterations,
+            "precision": precision,
+            "tolerance": tolerance,
+        }
+
+        if method_key in {"newton_raphson", "regula_falsi"}:
+            function_expression = (self.function_entry.get() if self.function_entry else "").strip()
+            if not function_expression:
+                raise ValueError("Function expression is required.")
+            payload["function_expression"] = function_expression
+
+            if method_key == "newton_raphson":
+                payload["initial_guess"] = self._parse_float(self.initial_guess_entry, "Initial Guess")
+            else:
+                payload["lower_bound"] = self._parse_float(self.lower_bound_entry, "Lower Bound")
+                payload["upper_bound"] = self._parse_float(self.upper_bound_entry, "Upper Bound")
+        else:
+            if not self.matrix_entries:
+                raise ValueError("Matrix entries are not initialized.")
+            matrix = [
+                [self._parse_float(entry, f"A[{row + 1},{col + 1}]") for col, entry in enumerate(row_entries)]
+                for row, row_entries in enumerate(self.matrix_entries)
+            ]
+            constants = [self._parse_float(entry, f"b[{idx + 1}]") for idx, entry in enumerate(self.constants_entries)]
+            initial_guess = [
+                self._parse_float(entry, f"x0[{idx + 1}]") for idx, entry in enumerate(self.initial_vector_entries)
+            ]
+            payload["matrix"] = matrix
+            payload["constants"] = constants
+            payload["initial_guess"] = initial_guess
+
+        return payload
+
+    def _solve_current_method(self) -> None:
+        method_key = self.controller.selected_method
+        if not method_key:
+            self.error_label.configure(text="No method selected. Go back and choose a method first.")
+            return
+
+        try:
+            payload = self._collect_payload(method_key)
+            request = SolveRequest(method_key=method_key, data=payload)
+            solver = MethodStrategyFactory.create_solver(request)
+            result = solver.solve()
+        except Exception as exc:
+            self.error_label.configure(text=str(exc))
+            return
+
+        self.error_label.configure(text="")
+        self.controller.last_result = result
+        self.controller.last_request = payload
+        self.controller.show_frame("ResultFrame")
 
 
 class ResultFrame(AppFrame):
