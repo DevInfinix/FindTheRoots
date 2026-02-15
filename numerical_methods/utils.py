@@ -13,11 +13,15 @@ class PrecisionFormatter:
 
     @staticmethod
     def round_scalar(value: float, precision: int) -> float:
-        return round(float(value), precision)
+        rounded = round(float(value), precision)
+        # Avoid displaying "-0.0" from tiny signed floating artifacts.
+        if abs(rounded) < 10 ** (-(precision + 1)):
+            return 0.0
+        return rounded
 
     @staticmethod
     def round_vector(values: list[float], precision: int) -> list[float]:
-        return [round(float(item), precision) for item in values]
+        return [PrecisionFormatter.round_scalar(float(item), precision) for item in values]
 
     @staticmethod
     def format_scalar(value: float | None, precision: int) -> str:

@@ -108,6 +108,7 @@ class TestPrecisionFormatter(unittest.TestCase):
     def test_formatting(self) -> None:
         self.assertEqual(PrecisionFormatter.format_scalar(1.234567, 3), "1.235")
         self.assertEqual(PrecisionFormatter.format_vector([1.2, 3.456], 2), "[1.20, 3.46]")
+        self.assertEqual(PrecisionFormatter.round_scalar(-1e-12, 6), 0.0)
 
 
 if __name__ == "__main__":
