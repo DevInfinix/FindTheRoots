@@ -3,6 +3,8 @@
 <p align="center">
   <b>Desktop visualizer for core Numerical Methods</b><br/>
   Newton-Raphson • Regula Falsi • Gauss-Jacobi • Gauss-Seidel
+  <b>Desktop visualizer for core Numerical Methods</b><br/>
+  Newton-Raphson • Regula Falsi • Gauss-Jacobi • Gauss-Seidel
 </p>
 
 <p align="center">
@@ -33,6 +35,14 @@
 - Linear + Transcendental function support
 
 Built with `Python`, `CustomTkinter`, `NumPy`, and `SymPy`.
+
+## Run it on Windows
+
+> - Download the latest release from the [Releases](https://github.com/DevInfinix/FindTheRoots/releases)
+> - Run the `.exe` file.
+> - If windows smart screen appears:
+> - - Click More info
+> - - Click Run anyway
 
 ## Quick Start
 
