@@ -3,6 +3,8 @@
 <p align="center">
   <b>Desktop visualizer for core Numerical Methods</b><br/>
   Newton-Raphson • Regula Falsi • Gauss-Jacobi • Gauss-Seidel
+  <b>Desktop visualizer for core Numerical Methods</b><br/>
+  Newton-Raphson • Regula Falsi • Gauss-Jacobi • Gauss-Seidel
 </p>
 
 <p align="center">
