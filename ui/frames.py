@@ -4,7 +4,6 @@ import customtkinter as ctk
 import numpy as np
 
 from .effects import ConfettiLayer
-from .math_render import formula_image
 from .strategies import create_solver
 from .theme import FONTS, PALETTE
 
@@ -87,29 +86,24 @@ class SelectionFrame(ctk.CTkFrame):
             {
                 "key": "newton_raphson",
                 "name": "Newton-Raphson",
-                "description": "Single guess, tangent update",
-                "formula": r"x_{n+1}=x_n-\frac{f(x_n)}{f'(x_n)}",
+                "description": "Start with one guess and improve it using slope each iteration.",
             },
             {
                 "key": "regula_falsi",
                 "name": "Regula Falsi",
-                "description": "Interval update using sign change",
-                "formula": r"c=\frac{a f(b)-b f(a)}{f(b)-f(a)}",
+                "description": "Use an interval and shrink it where sign changes.",
             },
             {
                 "key": "gauss_jacobi",
                 "name": "Gauss-Jacobi",
-                "description": "Uses only previous iteration values",
-                "formula": r"x_i^{(k+1)}=\frac{b_i-\sum_{j\neq i}a_{ij}x_j^{(k)}}{a_{ii}}",
+                "description": "Use only previous-iteration values to compute the next vector.",
             },
             {
                 "key": "gauss_seidel",
                 "name": "Gauss-Seidel",
-                "description": "Uses fresh values immediately",
-                "formula": r"x_i^{(k+1)}=\frac{b_i-\sum_{j<i}a_{ij}x_j^{(k+1)}-\sum_{j>i}a_{ij}x_j^{(k)}}{a_{ii}}",
+                "description": "Use freshly updated values immediately in the same iteration.",
             },
         ]
-        self.formula_images = []
 
         cards = ctk.CTkFrame(panel, fg_color="transparent")
         cards.grid(row=2, column=0, columnspan=2, sticky="nsew", padx=22, pady=10)
@@ -132,11 +126,7 @@ class SelectionFrame(ctk.CTkFrame):
     def build_card(self, parent, method):
         card = ctk.CTkFrame(parent, fg_color="#1A2434", corner_radius=14)
         ctk.CTkLabel(card, text=method["name"], font=FONTS["heading"], text_color=PALETTE["text_primary"]).pack(anchor="w", padx=14, pady=(14, 6))
-        ctk.CTkLabel(card, text=method["description"], font=FONTS["body"], text_color=PALETTE["text_secondary"]).pack(anchor="w", padx=14)
-
-        image = formula_image(method["formula"])
-        self.formula_images.append(image)
-        ctk.CTkLabel(card, text="", image=image).pack(anchor="w", padx=14, pady=(8, 8))
+        ctk.CTkLabel(card, text=method["description"], wraplength=420, justify="left", font=FONTS["body"], text_color=PALETTE["text_secondary"]).pack(anchor="w", padx=14, pady=(0, 10))
 
         button = ctk.CTkButton(
             card,
@@ -471,3 +461,4 @@ class ResultFrame(ctk.CTkFrame):
         if value is None:
             return "-"
         return f"{float(value):.{precision}f}"
+
