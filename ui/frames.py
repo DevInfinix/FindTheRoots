@@ -6,6 +6,10 @@ from dataclasses import dataclass
 from typing import Any
 
 import customtkinter as ctk
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from matplotlib.figure import Figure
+
+from numerical_methods.utils import PrecisionFormatter
 
 from .base import AppFrame
 from .strategies import MethodStrategyFactory, SolveRequest
@@ -548,7 +552,223 @@ class InputFrame(AppFrame):
 
 
 class ResultFrame(AppFrame):
-    """Placeholder for result rendering."""
+    """Results view with iteration table and convergence graph."""
 
     def __init__(self, parent: ctk.CTkFrame, controller: ctk.CTk) -> None:
         super().__init__(parent, controller, fg_color=PALETTE["bg"])
+        self.graph_canvas: FigureCanvasTkAgg | None = None
+
+        self.grid_rowconfigure(0, weight=1)
+        self.grid_columnconfigure(0, weight=1)
+
+        self.container = ctk.CTkFrame(
+            self,
+            fg_color=PALETTE["surface"],
+            corner_radius=16,
+            border_width=1,
+            border_color="#26364C",
+        )
+        self.container.grid(row=0, column=0, padx=38, pady=38, sticky="nsew")
+        self.container.grid_rowconfigure(1, weight=1)
+        self.container.grid_columnconfigure(0, weight=3)
+        self.container.grid_columnconfigure(1, weight=2)
+
+        self.header_label = ctk.CTkLabel(
+            self.container,
+            text="Computation Results",
+            font=FONTS["title"],
+            text_color=PALETTE["text_primary"],
+        )
+        self.header_label.grid(row=0, column=0, columnspan=2, pady=(18, 4))
+
+        self.summary_label = ctk.CTkLabel(
+            self.container,
+            text="",
+            justify="left",
+            font=FONTS["subtitle"],
+            text_color=PALETTE["text_secondary"],
+        )
+        self.summary_label.grid(row=0, column=0, columnspan=2, sticky="s", pady=(64, 12))
+
+        table_card = ctk.CTkFrame(self.container, fg_color=PALETTE["card"], corner_radius=14)
+        table_card.grid(row=1, column=0, sticky="nsew", padx=(20, 10), pady=(4, 12))
+        table_card.grid_rowconfigure(1, weight=1)
+        table_card.grid_columnconfigure(0, weight=1)
+
+        ctk.CTkLabel(
+            table_card,
+            text="Iteration Table",
+            font=FONTS["heading"],
+            text_color=PALETTE["text_primary"],
+        ).grid(row=0, column=0, sticky="w", padx=14, pady=(10, 6))
+
+        self.table_scroll = ctk.CTkScrollableFrame(table_card, fg_color="#111824", corner_radius=10)
+        self.table_scroll.grid(row=1, column=0, sticky="nsew", padx=12, pady=(0, 12))
+        self.table_scroll.grid_columnconfigure((0, 1, 2, 3), weight=1)
+
+        right_panel = ctk.CTkFrame(self.container, fg_color=PALETTE["card"], corner_radius=14)
+        right_panel.grid(row=1, column=1, sticky="nsew", padx=(10, 20), pady=(4, 12))
+        right_panel.grid_rowconfigure(1, weight=1)
+        right_panel.grid_columnconfigure(0, weight=1)
+
+        ctk.CTkLabel(
+            right_panel,
+            text="Convergence Graph",
+            font=FONTS["heading"],
+            text_color=PALETTE["text_primary"],
+        ).grid(row=0, column=0, sticky="w", padx=14, pady=(10, 6))
+
+        self.graph_host = ctk.CTkFrame(right_panel, fg_color="#111824", corner_radius=10)
+        self.graph_host.grid(row=1, column=0, sticky="nsew", padx=12, pady=(0, 10))
+
+        footer = ctk.CTkFrame(right_panel, fg_color="transparent")
+        footer.grid(row=2, column=0, pady=(0, 12))
+        ctk.CTkButton(
+            footer,
+            text="Edit Inputs",
+            width=120,
+            fg_color="#29364A",
+            hover_color="#374A66",
+            command=lambda: controller.show_frame("InputFrame"),
+        ).pack(side="left", padx=6)
+        ctk.CTkButton(
+            footer,
+            text="New Method",
+            width=120,
+            fg_color=PALETTE["accent"],
+            hover_color=PALETTE["accent_hover"],
+            text_color="#04121E",
+            command=lambda: controller.show_frame("SelectionFrame"),
+        ).pack(side="left", padx=6)
+
+    def on_show(self) -> None:
+        self._render_result()
+
+    def _render_result(self) -> None:
+        result = self.controller.last_result
+        request = self.controller.last_request or {}
+
+        if result is None:
+            self.summary_label.configure(text="No results available yet.")
+            self._clear_table()
+            self._clear_graph()
+            return
+
+        precision = int(request.get("precision", 6))
+        approx = self._format_estimate(result.final_estimate, precision)
+        status = "Converged" if result.converged else ("Diverged" if result.diverged else "Not Converged")
+        status_color = (
+            PALETTE["success"] if result.converged else (PALETTE["danger"] if result.diverged else "#F5B041")
+        )
+        self.header_label.configure(text=f"{result.method_name} Results")
+        warning_text = ""
+        if result.warnings:
+            warning_text = f"    Warning: {result.warnings[0]}"
+        self.summary_label.configure(
+            text=f"Status: {status}    Final Approximation: {approx}    Message: {result.message}{warning_text}",
+            text_color=status_color,
+        )
+
+        self._populate_table(result.iterations, precision)
+        self._plot_convergence(result.iterations)
+
+    def _format_estimate(self, estimate: Any, precision: int) -> str:
+        if estimate is None:
+            return "-"
+        if isinstance(estimate, list):
+            return PrecisionFormatter.format_vector(estimate, precision)
+        return PrecisionFormatter.format_scalar(float(estimate), precision)
+
+    def _clear_table(self) -> None:
+        for child in self.table_scroll.winfo_children():
+            child.destroy()
+
+    def _populate_table(self, iterations: list[Any], precision: int) -> None:
+        self._clear_table()
+        headers = ["Iter", "Estimate", "Error", "Residual"]
+        for col, title in enumerate(headers):
+            ctk.CTkLabel(
+                self.table_scroll,
+                text=title,
+                font=FONTS["body"],
+                text_color=PALETTE["accent_hover"],
+            ).grid(row=0, column=col, padx=8, pady=(8, 10), sticky="w")
+
+        for row, record in enumerate(iterations, start=1):
+            estimate_text = self._format_estimate(record.estimate, precision)
+            error_text = PrecisionFormatter.format_scalar(record.error, precision)
+            residual_text = PrecisionFormatter.format_scalar(record.residual, precision)
+
+            ctk.CTkLabel(self.table_scroll, text=str(record.iteration), font=FONTS["body"]).grid(
+                row=row, column=0, padx=8, pady=3, sticky="w"
+            )
+            ctk.CTkLabel(
+                self.table_scroll,
+                text=estimate_text,
+                font=FONTS["mono"],
+                wraplength=420,
+                justify="left",
+                text_color=PALETTE["text_primary"],
+            ).grid(row=row, column=1, padx=8, pady=3, sticky="w")
+            ctk.CTkLabel(
+                self.table_scroll,
+                text=error_text,
+                font=FONTS["mono"],
+                text_color=PALETTE["text_secondary"],
+            ).grid(row=row, column=2, padx=8, pady=3, sticky="w")
+            ctk.CTkLabel(
+                self.table_scroll,
+                text=residual_text,
+                font=FONTS["mono"],
+                text_color=PALETTE["text_secondary"],
+            ).grid(row=row, column=3, padx=8, pady=3, sticky="w")
+
+    def _clear_graph(self) -> None:
+        if self.graph_canvas is not None:
+            self.graph_canvas.get_tk_widget().destroy()
+            self.graph_canvas = None
+
+    def _plot_convergence(self, iterations: list[Any]) -> None:
+        self._clear_graph()
+
+        error_points = [(record.iteration, record.error) for record in iterations if record.error is not None]
+        residual_points = [
+            (record.iteration, record.residual) for record in iterations if record.residual is not None
+        ]
+
+        figure = Figure(figsize=(4.8, 3.2), dpi=100, facecolor="#111824")
+        axis = figure.add_subplot(111)
+        axis.set_facecolor("#111824")
+        axis.tick_params(colors="#A7BED7", labelsize=8)
+        axis.spines["bottom"].set_color("#3F5878")
+        axis.spines["top"].set_color("#3F5878")
+        axis.spines["left"].set_color("#3F5878")
+        axis.spines["right"].set_color("#3F5878")
+        axis.set_xlabel("Iteration", color="#A7BED7")
+        axis.set_ylabel("Magnitude", color="#A7BED7")
+
+        if error_points:
+            axis.plot(
+                [item[0] for item in error_points],
+                [item[1] for item in error_points],
+                color="#40C4FF",
+                linewidth=2,
+                label="Error",
+            )
+        if residual_points:
+            axis.plot(
+                [item[0] for item in residual_points],
+                [item[1] for item in residual_points],
+                color="#5DE8A0",
+                linewidth=2,
+                label="Residual",
+            )
+        if error_points or residual_points:
+            axis.legend(facecolor="#111824", edgecolor="#3F5878", labelcolor="#D4E2F2", fontsize=8)
+        else:
+            axis.text(0.5, 0.5, "No error/residual data", color="#A7BED7", ha="center", va="center")
+
+        figure.tight_layout(pad=1.2)
+        self.graph_canvas = FigureCanvasTkAgg(figure, master=self.graph_host)
+        self.graph_canvas.draw()
+        self.graph_canvas.get_tk_widget().pack(fill="both", expand=True, padx=4, pady=4)
