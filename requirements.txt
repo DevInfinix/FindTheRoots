@@ -1,0 +1,5 @@
+customtkinter>=5.2.2
+sympy>=1.13.3
+matplotlib>=3.9.2
+numpy>=2.1.2
+pyinstaller>=6.11.1
