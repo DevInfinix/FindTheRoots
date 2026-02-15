@@ -27,6 +27,9 @@ class App(ctk.CTk):
         container.grid_rowconfigure(0, weight=1)
         container.grid_columnconfigure(0, weight=1)
 
+        self.selected_method: str | None = None
+        self.last_result = None
+
         self.frames: dict[str, ctk.CTkFrame] = {}
         for frame_cls in (LandingFrame, SelectionFrame, InputFrame, ResultFrame):
             frame = frame_cls(container, self)

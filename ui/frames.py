@@ -2,10 +2,22 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+
 import customtkinter as ctk
 
 from .base import AppFrame
 from .theme import FONTS, PALETTE
+
+
+@dataclass(slots=True)
+class MethodCardSpec:
+    """Metadata used to render each selection card."""
+
+    key: str
+    name: str
+    description: str
+    formula: str
 
 
 class LandingFrame(AppFrame):
@@ -122,21 +134,146 @@ class LandingFrame(AppFrame):
 
 
 class SelectionFrame(AppFrame):
-    """Placeholder for method selection screen."""
+    """Card-based method selection screen."""
+
+    CARD_COLOR = "#1A212D"
+    CARD_HOVER_COLOR = "#233044"
 
     def __init__(self, parent: ctk.CTkFrame, controller: ctk.CTk) -> None:
         super().__init__(parent, controller, fg_color=PALETTE["bg"])
-        panel = ctk.CTkFrame(self, fg_color=PALETTE["surface"], corner_radius=16)
-        panel.pack(expand=True, fill="both", padx=48, pady=48)
 
-        ctk.CTkLabel(panel, text="Method Selection", font=FONTS["title"], text_color=PALETTE["text_primary"]).pack(pady=(40, 8))
+        self.grid_rowconfigure(0, weight=1)
+        self.grid_columnconfigure(0, weight=1)
+
+        panel = ctk.CTkFrame(
+            self,
+            fg_color=PALETTE["surface"],
+            corner_radius=16,
+            border_width=1,
+            border_color="#26364C",
+        )
+        panel.grid(row=0, column=0, padx=42, pady=42, sticky="nsew")
+        panel.grid_columnconfigure((0, 1), weight=1)
+        panel.grid_rowconfigure(2, weight=1)
+
         ctk.CTkLabel(
             panel,
-            text="Cards and solver metadata will be added in the next phase.",
+            text="Choose a Numerical Method",
+            font=FONTS["title"],
+            text_color=PALETTE["text_primary"],
+        ).grid(row=0, column=0, columnspan=2, pady=(26, 6))
+        ctk.CTkLabel(
+            panel,
+            text="Select a strategy to configure inputs and run iteration analysis.",
             font=FONTS["subtitle"],
             text_color=PALETTE["text_secondary"],
+        ).grid(row=1, column=0, columnspan=2, pady=(0, 20))
+
+        self.method_specs = [
+            MethodCardSpec(
+                key="newton_raphson",
+                name="Newton-Raphson",
+                description="Fast tangent-based root refinement from one initial guess.",
+                formula="x(n+1) = x(n) - f(x(n)) / f'(x(n))",
+            ),
+            MethodCardSpec(
+                key="regula_falsi",
+                name="Regula Falsi",
+                description="Bracketed false-position method using interval sign changes.",
+                formula="c = (a f(b) - b f(a)) / (f(b) - f(a))",
+            ),
+            MethodCardSpec(
+                key="gauss_jacobi",
+                name="Gauss-Jacobi",
+                description="Parallel-friendly iterative solver using prior vector values.",
+                formula="x_i(k+1) = (b_i - Σ(j!=i) a_ij x_j(k)) / a_ii",
+            ),
+            MethodCardSpec(
+                key="gauss_seidel",
+                name="Gauss-Seidel",
+                description="Sequential iterative solver with immediate in-step updates.",
+                formula="x_i(k+1) = (b_i - Σ(j<i) a_ij x_j(k+1) - Σ(j>i) a_ij x_j(k)) / a_ii",
+            ),
+        ]
+
+        cards_frame = ctk.CTkFrame(panel, fg_color="transparent")
+        cards_frame.grid(row=2, column=0, columnspan=2, sticky="nsew", padx=24, pady=10)
+        cards_frame.grid_columnconfigure((0, 1), weight=1)
+        cards_frame.grid_rowconfigure((0, 1), weight=1)
+
+        for index, spec in enumerate(self.method_specs):
+            row = index // 2
+            col = index % 2
+            card = self._build_method_card(cards_frame, spec)
+            card.grid(row=row, column=col, padx=12, pady=12, sticky="nsew")
+
+        footer = ctk.CTkFrame(panel, fg_color="transparent")
+        footer.grid(row=3, column=0, columnspan=2, pady=(6, 20))
+        ctk.CTkButton(
+            footer,
+            text="Back",
+            width=120,
+            fg_color="#29364A",
+            hover_color="#374A66",
+            command=lambda: controller.show_frame("LandingFrame"),
         ).pack()
-        ctk.CTkButton(panel, text="Back", command=lambda: controller.show_frame("LandingFrame")).pack(pady=24)
+
+    def _build_method_card(self, parent: ctk.CTkFrame, spec: MethodCardSpec) -> ctk.CTkFrame:
+        card = ctk.CTkFrame(
+            parent,
+            fg_color=self.CARD_COLOR,
+            corner_radius=14,
+            border_width=1,
+            border_color="#2A3A50",
+        )
+
+        title = ctk.CTkLabel(card, text=spec.name, font=FONTS["heading"], text_color=PALETTE["text_primary"])
+        title.pack(anchor="w", padx=16, pady=(14, 6))
+
+        description = ctk.CTkLabel(
+            card,
+            text=spec.description,
+            wraplength=420,
+            justify="left",
+            font=FONTS["body"],
+            text_color=PALETTE["text_secondary"],
+        )
+        description.pack(anchor="w", padx=16)
+
+        formula = ctk.CTkLabel(
+            card,
+            text=spec.formula,
+            wraplength=420,
+            justify="left",
+            font=FONTS["mono"],
+            text_color="#8DD5FF",
+        )
+        formula.pack(anchor="w", padx=16, pady=(10, 12))
+
+        select_button = ctk.CTkButton(
+            card,
+            text="Select",
+            width=100,
+            height=34,
+            fg_color=PALETTE["accent"],
+            hover_color=PALETTE["accent_hover"],
+            text_color="#03111D",
+            command=lambda selected=spec.key: self._select_method(selected),
+        )
+        select_button.pack(anchor="w", padx=16, pady=(0, 14))
+
+        self._bind_card_hover(card, [title, description, formula, select_button])
+        return card
+
+    def _bind_card_hover(self, card: ctk.CTkFrame, children: list[ctk.CTkBaseClass]) -> None:
+        targets = [card, *children]
+        for target in targets:
+            target.bind("<Enter>", lambda _event, c=card: c.configure(fg_color=self.CARD_HOVER_COLOR))
+            target.bind("<Leave>", lambda _event, c=card: c.configure(fg_color=self.CARD_COLOR))
+
+    def _select_method(self, method_key: str) -> None:
+        self.controller.selected_method = method_key
+        self.controller.show_frame("InputFrame")
 
 
 class InputFrame(AppFrame):
