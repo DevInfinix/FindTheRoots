@@ -602,9 +602,16 @@ class ResultFrame(AppFrame):
             text_color=PALETTE["text_primary"],
         ).grid(row=0, column=0, sticky="w", padx=14, pady=(10, 6))
 
-        self.table_scroll = ctk.CTkScrollableFrame(table_card, fg_color="#111824", corner_radius=10)
-        self.table_scroll.grid(row=1, column=0, sticky="nsew", padx=12, pady=(0, 12))
-        self.table_scroll.grid_columnconfigure((0, 1, 2, 3), weight=1)
+        self.table_text = ctk.CTkTextbox(
+            table_card,
+            fg_color="#111824",
+            corner_radius=10,
+            font=FONTS["mono"],
+            wrap="none",
+            text_color=PALETTE["text_primary"],
+        )
+        self.table_text.grid(row=1, column=0, sticky="nsew", padx=12, pady=(0, 12))
+        self.table_text.configure(state="disabled")
 
         right_panel = ctk.CTkFrame(self.container, fg_color=PALETTE["card"], corner_radius=14)
         right_panel.grid(row=1, column=1, sticky="nsew", padx=(10, 20), pady=(4, 12))
@@ -680,48 +687,24 @@ class ResultFrame(AppFrame):
         return PrecisionFormatter.format_scalar(float(estimate), precision)
 
     def _clear_table(self) -> None:
-        for child in self.table_scroll.winfo_children():
-            child.destroy()
+        self.table_text.configure(state="normal")
+        self.table_text.delete("1.0", "end")
+        self.table_text.configure(state="disabled")
 
     def _populate_table(self, iterations: list[Any], precision: int) -> None:
         self._clear_table()
-        headers = ["Iter", "Estimate", "Error", "Residual"]
-        for col, title in enumerate(headers):
-            ctk.CTkLabel(
-                self.table_scroll,
-                text=title,
-                font=FONTS["body"],
-                text_color=PALETTE["accent_hover"],
-            ).grid(row=0, column=col, padx=8, pady=(8, 10), sticky="w")
+        lines = [f"{'Iter':<6}{'Estimate':<44}{'Error':<18}{'Residual':<18}"]
+        lines.append("-" * 90)
 
-        for row, record in enumerate(iterations, start=1):
+        for record in iterations:
             estimate_text = self._format_estimate(record.estimate, precision)
             error_text = PrecisionFormatter.format_scalar(record.error, precision)
             residual_text = PrecisionFormatter.format_scalar(record.residual, precision)
+            lines.append(f"{record.iteration:<6}{estimate_text:<44}{error_text:<18}{residual_text:<18}")
 
-            ctk.CTkLabel(self.table_scroll, text=str(record.iteration), font=FONTS["body"]).grid(
-                row=row, column=0, padx=8, pady=3, sticky="w"
-            )
-            ctk.CTkLabel(
-                self.table_scroll,
-                text=estimate_text,
-                font=FONTS["mono"],
-                wraplength=420,
-                justify="left",
-                text_color=PALETTE["text_primary"],
-            ).grid(row=row, column=1, padx=8, pady=3, sticky="w")
-            ctk.CTkLabel(
-                self.table_scroll,
-                text=error_text,
-                font=FONTS["mono"],
-                text_color=PALETTE["text_secondary"],
-            ).grid(row=row, column=2, padx=8, pady=3, sticky="w")
-            ctk.CTkLabel(
-                self.table_scroll,
-                text=residual_text,
-                font=FONTS["mono"],
-                text_color=PALETTE["text_secondary"],
-            ).grid(row=row, column=3, padx=8, pady=3, sticky="w")
+        self.table_text.configure(state="normal")
+        self.table_text.insert("1.0", "\n".join(lines))
+        self.table_text.configure(state="disabled")
 
     def _clear_graph(self) -> None:
         if self.graph_canvas is not None:
@@ -735,6 +718,14 @@ class ResultFrame(AppFrame):
         residual_points = [
             (record.iteration, record.residual) for record in iterations if record.residual is not None
         ]
+
+        max_points = 600
+        if len(error_points) > max_points:
+            stride = max(1, len(error_points) // max_points)
+            error_points = error_points[::stride]
+        if len(residual_points) > max_points:
+            stride = max(1, len(residual_points) // max_points)
+            residual_points = residual_points[::stride]
 
         figure = Figure(figsize=(4.8, 3.2), dpi=100, facecolor="#111824")
         axis = figure.add_subplot(111)

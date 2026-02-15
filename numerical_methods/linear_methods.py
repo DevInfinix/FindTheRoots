@@ -124,14 +124,12 @@ class GaussJacobi(_IterativeLinearSolver):
             tolerance=tolerance,
             precision=precision,
         )
+        diagonal = np.diag(self.matrix)
+        self._inverse_diagonal = 1.0 / diagonal
+        self._remainder = self.matrix - np.diagflat(diagonal)
 
     def _next_vector(self, current: np.ndarray) -> np.ndarray:
-        next_vector = np.zeros_like(current)
-        size = self.matrix.shape[0]
-        for row in range(size):
-            sigma = np.dot(self.matrix[row, :], current) - (self.matrix[row, row] * current[row])
-            next_vector[row] = (self.constants[row] - sigma) / self.matrix[row, row]
-        return next_vector
+        return (self.constants - (self._remainder @ current)) * self._inverse_diagonal
 
 
 class GaussSeidel(_IterativeLinearSolver):
